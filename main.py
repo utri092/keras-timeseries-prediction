@@ -1,9 +1,11 @@
 import numpy
 import pandas
+import keras
 import matplotlib.pyplot as plt
 
 from keras.layers import Dense, LSTM
 from keras.models import Sequential
+
 from sklearn.metrics import mean_squared_error
 
 from sklearn.preprocessing import MinMaxScaler
@@ -27,6 +29,7 @@ def load_dataset(datasource: str) -> (numpy.ndarray, MinMaxScaler):
     dataset = dataframe.values
     dataset = dataset.astype('float32')
 
+    plt.title("Original Dataset")
     plt.plot(dataset)
     plt.show()
 
@@ -113,10 +116,10 @@ def plot_data(dataset: numpy.ndarray,
     plt.plot([None for _ in range(look_back)] +
              [None for _ in train_predict] +
              [x for x in test_predict])
-    plt.plot([None for _ in range(look_back)] +
-             [None for _ in train_predict] +
-             [None for _ in test_predict] +
-             [x for x in forecast_predict])
+    # plt.plot([None for _ in range(look_back)] +
+    #          [None for _ in train_predict] +
+    #          [None for _ in test_predict] +
+    #          [x for x in forecast_predict])
     plt.show()
 
 
@@ -156,8 +159,10 @@ def main():
     # create and fit Multilayer Perceptron model
     batch_size = 1
     model = build_model(look_back, batch_size=batch_size)
+    early_stop = keras.callbacks.EarlyStopping(monitor='loss', patience=1, restore_best_weights=True)
+
     for _ in trange(100, desc='fitting model\t', mininterval=1.0):
-        model.fit(train_x, train_y, nb_epoch=1, batch_size=batch_size, verbose=0, shuffle=False)
+        model.fit(train_x, train_y, epochs=1, batch_size=batch_size, verbose=0, shuffle=False, callbacks=[early_stop])
         model.reset_states()
 
     # generate predictions for training
@@ -180,6 +185,8 @@ def main():
     print('Train Score: %.2f RMSE' % train_score)
     test_score = numpy.sqrt(mean_squared_error(test_y[0], test_predict[:, 0]))
     print('Test Score: %.2f RMSE' % test_score)
+
+    model.save("financeKerasModel.h5")
 
     plot_data(dataset, look_back, train_predict, test_predict, forecast_predict)
 
